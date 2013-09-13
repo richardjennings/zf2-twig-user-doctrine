@@ -1,0 +1,33 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "precise32"
+  config.vm.box_url = "http://files.vagrantup.com/precise32.box"
+  config.vm.network :private_network, ip: "192.168.20.20"
+  config.vm.synced_folder "shared", "/var/www", :nfs => true, nfs_version: "3"
+  config.vm.provision :shell,
+    :inline => "sudo apt-get update; sudo DEBIAN_FRONTEND=noninteractive apt-get -q -y install lamp-server^"
+  config.vm.provision :shell,
+    :inline => "sudo a2enmod rewrite"
+  config.vm.provision :shell,
+    :inline => 'echo  "<VirtualHost *:80>
+        DocumentRoot /var/www/public
+        <Directory /var/www/public>
+            DirectoryIndex index.php
+            AllowOverride none
+            Order allow,deny
+            Allow from all
+            RewriteEngine On
+            RewriteCond %{REQUEST_FILENAME} -s [OR]
+            RewriteCond %{REQUEST_FILENAME} -l [OR]
+            RewriteCond %{REQUEST_FILENAME} -d
+            RewriteRule ^.*$ - [NC,L]
+            RewriteRule ^.*$ index.php [NC,L]
+        </Directory>
+    </VirtualHost>" > /etc/apache2/sites-available/default'
+  config.vm.provision :shell,
+    :inline => "sudo sed -i 's/display_errors = .*/display_errors = On /' /etc/php5/apache2/php.ini"
+  config.vm.provision :shell,
+    :inline => "sudo service apache2 restart"
+end
